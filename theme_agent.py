@@ -1,12 +1,12 @@
-import google.generativeai as genai
+import google.genai as genai
+from google.genai import types
 from config import GEMINI_API_KEY
 from news_agent import get_theme_news
 
-genai.configure(api_key=GEMINI_API_KEY)
+client = genai.Client(api_key=GEMINI_API_KEY)
 
 def analyze_themes():
     theme_news = get_theme_news()
-    model      = genai.GenerativeModel("gemini-1.5-flash")
     analysis   = {}
 
     news_text = ""
@@ -37,7 +37,10 @@ WATCH: [stock1, stock2]
 """
 
     try:
-        response = model.generate_content(prompt)
+        response = client.models.generate_content(
+            model="gemini-2.0-flash",
+            contents=prompt
+        )
         raw_text = response.text
         blocks   = raw_text.split("---")
         for block in blocks:
@@ -50,10 +53,10 @@ WATCH: [stock1, stock2]
                         theme_key = line.replace("THEME:", "").strip()
                     elif line.startswith("SIGNAL:"):
                         raw_sig = line.replace("SIGNAL:", "").strip().upper()
-                        if "HOT"      in raw_sig: block_data["signal"] = "🔥 HOT"
-                        elif "POS"    in raw_sig: block_data["signal"] = "✅ POSITIVE"
-                        elif "NEG"    in raw_sig: block_data["signal"] = "🔴 NEGATIVE"
-                        else:                      block_data["signal"] = "⚠️ NEUTRAL"
+                        if "HOT"   in raw_sig: block_data["signal"] = "🔥 HOT"
+                        elif "POS" in raw_sig: block_data["signal"] = "✅ POSITIVE"
+                        elif "NEG" in raw_sig: block_data["signal"] = "🔴 NEGATIVE"
+                        else:                   block_data["signal"] = "⚠️ NEUTRAL"
                     elif line.startswith("SUMMARY:"):
                         block_data["summary"] = line.replace("SUMMARY:", "").strip()
                     elif line.startswith("WATCH:"):
