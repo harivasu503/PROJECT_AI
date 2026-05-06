@@ -1,0 +1,29 @@
+name: Daily Stock Agent
+
+on:
+  schedule:
+    - cron: '30 10 * * 1-5'   # Runs at 4:00 PM IST (Mon-Fri)
+  workflow_dispatch:            # Also allows manual trigger
+
+jobs:
+  run-agent:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      
+      - name: Run Stock Agent
+        env:
+          MARKETAUX_API_KEY: ${{ secrets.MARKETAUX_API_KEY }}
+          GEMINI_API_KEY:    ${{ secrets.GEMINI_API_KEY }}
+          SENDER_EMAIL:      ${{ secrets.SENDER_EMAIL }}
+          SENDER_PASSWORD:   ${{ secrets.SENDER_PASSWORD }}
+          RECEIVER_EMAIL:    ${{ secrets.RECEIVER_EMAIL }}
+        run: python main.py
