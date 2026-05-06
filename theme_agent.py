@@ -1,21 +1,29 @@
 import google.genai as genai
-from google.genai import types
 from config import GEMINI_API_KEY
 from news_agent import get_theme_news
 
-client = genai.Client(api_key=GEMINI_API_KEY)
-
 def analyze_themes():
+    analysis  = {}
     theme_news = get_theme_news()
-    analysis   = {}
 
-    news_text = ""
-    for theme, articles in theme_news.items():
-        news_text += f"\n\n### THEME: {theme}\n"
-        for a in articles:
-            news_text += f"- {a.get('title', '')}: {a.get('description', '')}\n"
+    if not GEMINI_API_KEY:
+        analysis["Config"] = {"signal": "⚠️", "summary": "No Gemini API key provided", "watch": "N/A"}
+        return analysis
 
-    prompt = f"""You are an expert Indian stock market analyst.
+    try:
+        client = genai.Client(api_key=GEMINI_API_KEY)
+
+        news_text = ""
+        for theme, articles in theme_news.items():
+            news_text += f"\n\n### THEME: {theme}\n"
+            for a in articles:
+                news_text += f"- {a.get('title', '')}: {a.get('description', '')}\n"
+
+        if not news_text.strip():
+            analysis["News"] = {"signal": "⚠️", "summary": "No news fetched from Marketaux", "watch": "N/A"}
+            return analysis
+
+        prompt = f"""You are an expert Indian stock market analyst.
 
 Below is today's news grouped by market themes. For each theme:
 1. Rate its market strength: HOT / POSITIVE / NEUTRAL / NEGATIVE
@@ -35,14 +43,14 @@ SUMMARY: [2-line summary]
 WATCH: [stock1, stock2]
 ---
 """
-
-    try:
         response = client.models.generate_content(
             model="gemini-2.0-flash",
             contents=prompt
         )
         raw_text = response.text
-        blocks   = raw_text.split("---")
+        print(f"Gemini responded with {len(raw_text)} chars")
+
+        blocks = raw_text.split("---")
         for block in blocks:
             if "THEME:" in block:
                 lines      = block.strip().split("\n")
@@ -63,7 +71,9 @@ WATCH: [stock1, stock2]
                         block_data["watch"]   = line.replace("WATCH:", "").strip()
                 if theme_key:
                     analysis[theme_key] = block_data
+
     except Exception as e:
-        analysis["Error"] = {"signal": "⚠️", "summary": str(e), "watch": "N/A"}
+        print(f"Gemini error details: {type(e).__name__}: {e}")
+        analysis["Error"] = {"signal": "⚠️", "summary": f"{type(e).__name__}: {str(e)[:80]}", "watch": "N/A"}
 
     return analysis
